@@ -3,7 +3,6 @@
 # TODO: this gives us a trailing colon
 VERSION=0.5.0
 LIBS="$(find -H lib/ -mindepth 2> /dev/null 1 -maxdepth 1 -print0 | tr \\0 \:)"
-CLASSPATH="src/:classes/:$LIBS"
 LEIN_JAR=$HOME/.m2/repository/leiningen/leiningen/$VERSION/leiningen-$VERSION.jar
 
 # this needs to exist before the JVM is launched apparently
@@ -15,8 +14,9 @@ if [ ! -r "bin/lein" ]; then
         echo "Leiningen is not installed. Please run \"lein self-install\"."
         exit 1
     fi
-
-    CLASSPATH="$CLASSPATH:$LEIN_JAR"
+    CLASSPATH="src/:classes/:$LIBS:$LEIN_JAR"
+else
+    CLASSPATH="$LEIN_JAR"
 fi
 
 if [ "$1" = "test" ]; then
