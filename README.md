@@ -26,13 +26,18 @@ rather than copying and pasting among each of your projects.
 
 ## Installation
 
-Copy bin/lein to a location on your $PATH and run: $ lein self-install
+1. Download the script: http://github.com/technomancy/leiningen/raw/stable/bin/lein
+2. Place it on your path and chmod it to be executable.
+3. Run: <tt>lein self-install</tt>
+
+This works best with stable versions of Leiningen; for development
+versions see "Hacking" below.
 
 ## Usage
 
     $ lein deps # install dependencies in lib/
 
-    $ lein test [PRED] # run the project's tests, optionally filtered on PRED
+    $ lein test [TESTS] # run the tests in the TESTS namespaces, or all tests
 
     $ lein compile # ahead-of-time compile into classes/
 
@@ -46,29 +51,33 @@ Copy bin/lein to a location on your $PATH and run: $ lein self-install
 
     $ lein pom # output a pom.xml file for interop with Maven
 
-    $ lein install # install in local repo (currently requires mvn)
+    $ lein install # install in local repository
 
     $ lein help [TASK] # show a list of tasks or help for a given TASK
 
-TODO: new, deploy
+    $ lein new NAME # generate a new project skeleton
 
 ## Configuration
 
 Place a project.clj file in the project root that looks something like this: 
 
     (defproject leiningen "0.5.0-SNAPSHOT"
+      :description "A build tool designed not to set your hair on fire."
+      :url "http://github.com/technomancy/leiningen"
       :dependencies [[org.clojure/clojure "1.1.0-alpha-SNAPSHOT"]
                      [org.clojure/clojure-contrib "1.0-SNAPSHOT"]
                      [ant/ant-launcher "1.6.2"]
                      [org.apache.maven/maven-ant-tasks "2.0.10"]]
       :dev-dependencies [[org.clojure/swank-clojure "1.0"]])
 
-Other keys you can set are :namespaces to compile if you don't want
-all of them AOT'd as well as a :main namespace for building executable jars.
+Other keys accepted:
 
-Currently Leiningen can only be used to compile projects that use the
-same version of Clojure as it uses, though this restriction should go
-away soon.
+* :namespaces - if set, only AOT-compile namespaces listed here rather
+  than all namespaces found in src/ directory.
+* :main - specify a namespace to use as main for an executable jar.
+* :repositories - additional maven repositories to search for dependencies.
+* :source-path, :compile-path, :library-path, :test-path, :resources-path -
+  alternate paths for src/, classes/, lib/, resources/, and test/ directories.
 
 ## FAQ
 
@@ -91,40 +100,87 @@ away soon.
 **A:** That's [true](http://www.defmacro.org/ramblings/lisp.html). Ant is
    an interpreter for a [procedural language with a regrettable 
    syntax](http://blogs.tedneward.com/2005/08/22/When+Do+You+Use+XML+Again.aspx).
-   But if you're able to write it with a more pleasing syntax, it's
-   not so bad.
+   But if you treat it as a standard library of build-related
+   functions and are able to write it with a more pleasing syntax, it's
+   not bad.
+
+**Q:** What if my project depends on jars that aren't in any repository?
+**A:** Open-source jars can be uploaded to Clojars (see "Publishing"
+  below), though be sure to use the groupId of "org.clojars.$USERNAME"
+  in order to avoid conflicts and to allow the original authors to
+  claim it in the future once they get around to uploading. 
+  Alternatively you can install into your local repository in ~/.m2
+  with Maven for Java libs or "lein install" for Clojure libs.
 
 **Q:** What happened to [Corkscrew](http://github.com/technomancy/corkscrew)?  
 **A:** I tried, but I really couldn't make the wine metaphor work. That,
    and the Plexus Classworlds container was an ornery beast causing
-   much frustration.
+   much frustration. The maven-ant-tasks API is much more manageable.
 
 **Q:** What about Windows?  
 **A:** Patches welcome.
 
+## Publishing
+
+If your project is a library and you would like others to be able to
+use it as a dependency in their projects, you will need to get it into
+a public repository. While it's possible to maintain your own or get
+it into Maven central, the easiest way is to publish it at
+[Clojars](http://clojars.org), which is a Clojure-specific repository
+for open-source code. Once you have created an account there,
+publishing is easy:
+
+    $ lein pom
+    $ scp pom.xml $PROJECT.jar clojars@clojars.org:
+
+Once that succeeds it will be available for other projects to depend
+on. Leiningen adds Clojars and [the Clojure nightly build
+snapshots](http://build.clojure.org) to the default repositories.
+
+## Known Issues
+
+* The repl task will use the version of Clojure and Contrib that
+  Leiningen uses, not the one specified by your project.
+
+* Projects that use Clojure 1.0 are supported, but the test task does
+  not support clojure.contrib.test-is. This may be added with a plugin
+  later.
+
+* Due to a bug in contrib's build, the swank plugin may not work with
+  projects that use Clojure 1.0 and contrib together.
+
 ## Hacking
 
-Working on the Leiningen codebase has a few unique challenges since
-there's a bit of a chicken-and-egg bootstrap problem. To go from a
-clean checkout to a working environment, the following steps are
-necessary:
+You'll need to bootstrap using a stable release before you can hack on
+Leiningen. Grab the stable bin script (linked under "Installation"
+above), put it on your $PATH as "lein-stable", and do "lein-stable
+self-install". Then run "lein-stable deps" in your checkout. When that
+finishes, symlink bin/lein from your checkout to your path.  This will
+make "lein" run from your checkout while "lein-stable" uses the jar
+self-installed in ~/.m2.
 
-0. Place bin/lein on your $PATH somewhere.
-1. Do a self-install of leiningen (from outside the checkout tree).
-2. Place ~/.leiningen.jar in lib.
-3. Invoke "lein compile" followed by "lein deps".
-4. Remove .leiningen.jar from lib.
-5. Invoke "lein uberjar", and place the jar in ~/.leiningen.jar for
-   future use.
+The [mailing list](http://groups.google.com/group/clojure) and the
+leiningen or clojure channels on Freenode are the best places to
+bring up questions or suggestions. If you're planning on adding a
+feature or fixing a nontrivial bug, please discuss it first to avoid
+duplicating effort.
 
-Leiningen is extensible, you can define new tasks in plugins. Add your
+Contributions are preferred as either Github pull requests or using
+"git format-patch" as is requested [for contributing to Clojure
+itself](http://clojure.org/patches). Please use standard indentation
+with no tabs, trailing whitespace, or lines longer than 80 columns. If
+you've got some time on your hands, reading this [style
+guide](http://mumble.net/~campbell/scheme/style.txt) wouldn't hurt
+either.
+
+Leiningen is extensible; you can define new tasks in plugins. Add your
 plugin as a dev-dependency of your project, and you'll be able to call
 "lein $YOUR_COMMAND". See the lein-swank directory for an example of a
 plugin.
 
 ## License
 
-Copyright (C) 2009 Phil Hagelberg
+Copyright (C) 2009 Phil Hagelberg, Alex Osborne, and Dan Larkin
 
 Thanks to Stuart Halloway for Lancet and Tim Dysinger for convincing
 me that good builds are important.
