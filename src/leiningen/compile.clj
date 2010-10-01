@@ -161,6 +161,7 @@
             cp
             (proxy [ClassLoader] []
               (findClass [name]
+                         (println :findClass name)
                          (throw (ClassNotFoundException. name)))
               (getParent [] this)
               (getResource [_] nil)
@@ -170,8 +171,9 @@
                ([name]
                   (.loadClass this name false))
                ([name x]
+                  (println "loadClass" name)
                   (if (or (.startsWith name "java.")
-                          nil)
+                          (.startsWith name "sun."))
                     (proxy-super loadClass name x)
                     (throw (ClassNotFoundException. name)))))))
         old-cl (.getContextClassLoader (Thread/currentThread))]
@@ -184,13 +186,15 @@
             eval (fn [f]
                    (wall-hack-method
                     compiler :eval [Object] nil f))]
+        (prn form)
         (try
           (eval
            (read-string
             (pr-str
              `(do ~init
-                  (binding [*warn-on-reflection* true
-                            *compile-path* ~(:compile-path project)]
+                  (binding [*warn-on-reflection* false
+                            *compile-path* ~(:compile-path project)
+                            *use-context-classloader* true]
                     ~form)))))
           0
           (catch Throwable t
