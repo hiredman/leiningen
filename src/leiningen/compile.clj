@@ -146,22 +146,20 @@
       (compile project)))
   (when (empty? (find-lib-jars project))
     (deps project))
-  (let [bootcp (for [x (.split (System/getProperty "sun.boot.class.path") ":")
-                     :when (not (re-find #"clojure" x))]
-                         x)
+  (let [bootcp nil
         cp (for [i (get-classpath project)
                  :let [f (if (string? i) (file i) i)]]
              (str (.getAbsolutePath f)
                   (when (.isDirectory f)
                     "/")))
         cp (concat bootcp cp)
+        _ (println cp)
         cp (for [c cp] (java.net.URL. (format "file://%s" c)))
         cp (into-array java.net.URL cp)
         cl (java.net.URLClassLoader.
             cp
             (proxy [ClassLoader] []
               (findClass [name]
-                         (println :findClass name)
                          (throw (ClassNotFoundException. name)))
               (getParent [] this)
               (getResource [_] nil)
@@ -171,7 +169,6 @@
                ([name]
                   (.loadClass this name false))
                ([name x]
-                  (println "loadClass" name)
                   (if (or (.startsWith name "java.")
                           (.startsWith name "sun."))
                     (proxy-super loadClass name x)
