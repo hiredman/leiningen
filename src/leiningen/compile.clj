@@ -146,14 +146,11 @@
       (compile project)))
   (when (empty? (find-lib-jars project))
     (deps project))
-  (let [bootcp nil
-        cp (for [i (get-classpath project)
+  (let [cp (for [i (get-classpath project)
                  :let [f (if (string? i) (file i) i)]]
              (str (.getAbsolutePath f)
                   (when (.isDirectory f)
                     "/")))
-        cp (concat bootcp cp)
-        _ (println cp)
         cp (for [c cp] (java.net.URL. (format "file://%s" c)))
         cp (into-array java.net.URL cp)
         cl (java.net.URLClassLoader.
@@ -170,7 +167,8 @@
                   (.loadClass this name false))
                ([name x]
                   (if (or (.startsWith name "java.")
-                          (.startsWith name "sun."))
+                          (.startsWith name "sun.")
+                          (.startsWith name "org.xml"))
                     (proxy-super loadClass name x)
                     (throw (ClassNotFoundException. name)))))))
         old-cl (.getContextClassLoader (Thread/currentThread))]
@@ -183,6 +181,7 @@
             eval (fn [f]
                    (wall-hack-method
                     compiler :eval [Object] nil f))]
+        (println init)
         (prn form)
         (try
           (eval
